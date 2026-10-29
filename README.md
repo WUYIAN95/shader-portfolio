@@ -1,5 +1,9 @@
 # Shader Study 01 — Fractal Bloom
 
+## Live Demo
+
+[Open the real-time WebGL shader](https://wuyian95.github.io/shader-portfolio/)
+
 A single-file WebGL portfolio page. The fragment shader uses a Shadertoy-style `mainImage` entry point with `iResolution` and `iTime` uniforms. No build step or external libraries are required.
 
 ## Run locally
