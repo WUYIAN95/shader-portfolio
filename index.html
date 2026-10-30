@@ -4,193 +4,30 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#080a0d">
-  <meta name="description" content="A real-time WebGL shader study.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='14' fill='none' stroke='%23f1a0a8' stroke-width='4'/%3E%3C/svg%3E">
-  <title>Shader Study 02 — Octahedron Tunnel</title>
+  <title>Shader Portfolio</title>
   <style>
     :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
     * { box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #080a0d; }
-    canvas { display: block; width: 100%; height: 100%; }
-    .label {
-      position: fixed; left: clamp(20px, 4vw, 52px); top: clamp(20px, 4vw, 48px);
-      color: #f1f0ec; pointer-events: none;
-    }
-    .eyebrow { color: #a2a6aa; font: 600 10px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .16em; }
-    h1 { margin: 10px 0 0; font-size: 16px; line-height: 1.25; font-weight: 500; }
-    .control {
-      position: fixed; right: clamp(20px, 4vw, 48px); bottom: clamp(20px, 4vw, 40px);
-      display: grid; place-items: center; width: 42px; height: 42px; padding: 0;
-      color: #eee; background: rgb(15 18 22 / 72%); border: 1px solid rgb(255 255 255 / 18%);
-      border-radius: 50%; cursor: pointer; backdrop-filter: blur(10px);
-    }
-    .control:hover { background: #22272c; }
-    .control:focus-visible { outline: 2px solid #f1a0a8; outline-offset: 3px; }
-    .control svg { width: 15px; height: 15px; fill: currentColor; }
-    .error { position: fixed; left: 20px; right: 20px; bottom: 20px; color: #ffb4b4; font: 12px/1.5 ui-monospace, monospace; white-space: pre-wrap; }
-    @media (prefers-reduced-motion: reduce) { .eyebrow::after { content: " · REAL-TIME"; } }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; background: #080a0d; color: #f1f0ec; }
+    main { width: min(760px, 90vw); }
+    .eyebrow { color: #a2a6aa; font: 600 10px/1.2 ui-monospace, monospace; letter-spacing: .16em; }
+    h1 { margin: 12px 0 36px; font-size: clamp(34px, 7vw, 68px); font-weight: 400; letter-spacing: -.04em; }
+    .studies { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+    a { display: block; min-height: 190px; padding: 24px; color: inherit; text-decoration: none; background: #11151a; border: 1px solid #30343a; border-radius: 14px; transition: transform .2s, border-color .2s, background .2s; }
+    a:hover, a:focus-visible { background: #171c22; border-color: #f1a0a8; transform: translateY(-3px); outline: none; }
+    .number { color: #f1a0a8; font: 11px ui-monospace, monospace; }
+    .name { margin-top: 46px; font-size: 22px; }
+    .description { margin-top: 8px; color: #a2a6aa; font-size: 13px; line-height: 1.5; }
   </style>
 </head>
 <body>
-  <canvas id="canvas" aria-label="Animated WebGL shader artwork"></canvas>
-  <header class="label">
-    <div class="eyebrow">SHADER STUDY / 02</div>
-    <h1>Octahedron Tunnel</h1>
-  </header>
-  <button class="control" id="toggle" type="button" aria-label="Pause animation" title="Pause animation">
-    <svg id="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></svg>
-  </button>
-  <pre class="error" id="error" role="alert" hidden></pre>
-  <script>
-    const canvas = document.querySelector('#canvas');
-    const errorBox = document.querySelector('#error');
-    const toggle = document.querySelector('#toggle');
-    const icon = document.querySelector('#icon');
-
-    const vertexSource = `
-      attribute vec2 position;
-      void main() { gl_Position = vec4(position, 0.0, 1.0); }
-    `;
-
-    // Shadertoy-style entry point and uniforms, adapted to WebGL 1.
-    const fragmentSource = `
-      precision highp float;
-      uniform vec3 iResolution;
-      uniform float iTime;
-      uniform vec4 iMouse;
-
-      vec3 palette(float t) {
-        vec3 a = vec3(0.5, 0.5, 0.5);
-        vec3 b = vec3(0.5, 0.5, 0.5);
-        vec3 c = vec3(1.0, 1.0, 1.0);
-        vec3 d = vec3(0.0, 0.333, 0.667);
-        return a + b * cos(6.28318 * (c * t + d));
-      }
-
-      void mainImage(out vec4 fragcolor, in vec2 fragcoord) {
-        vec2 uv = (fragcoord * 2.0 - iResolution.xy) / iResolution.y;
-        vec2 m = (iMouse.xy * 2.0 - iResolution.xy) / iResolution.y;
-        vec3 ro = vec3(0.0, 0.0, -3.0);
-        vec3 rd = normalize(vec3(uv, 1.0));
-        float t = 0.0;
-        if (iMouse.z < 0.0) m = vec2(cos(iTime * 0.2), sin(iTime * 0.2));
-        int i;
-        for (i = 0; i < 80; i++) {
-          vec3 p = ro + rd * t;
-          p.xy *= rot2D(t * 0.2 * m.x);
-          p.y += sin(t * (m.y + 1.0)) * 0.35;
-          float d = map(p);
-          t += d;
-          if (d < 0.001 || t > 100.0) break;
-        }
-        fragcolor = vec4(palette(float(i) / 80.0), 1.0);
-      }
-
-      void main() {
-        vec4 color;
-        mainImage(color, gl_FragCoord.xy);
-        gl_FragColor = color;
-      }
-    `;
-
-    function compile(type, source) {
-      const shader = gl.createShader(type);
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        const message = gl.getShaderInfoLog(shader);
-        gl.deleteShader(shader);
-        throw new Error(message || 'Unknown shader compilation error');
-      }
-      return shader;
-    }
-
-    let gl;
-    let program;
-    let resolutionLocation;
-    let timeLocation;
-    let mouseLocation;
-    let startTime = performance.now();
-    let pausedAt = 0;
-    let paused = false;
-    let currentTime = 0;
-    const mouse = { x: 0, y: 0, z: -1, w: 0 };
-
-    try {
-      gl = canvas.getContext('webgl', { antialias: false, powerPreference: 'high-performance' });
-      if (!gl) throw new Error('WebGL is unavailable in this browser.');
-
-      program = gl.createProgram();
-      gl.attachShader(program, compile(gl.VERTEX_SHADER, vertexSource));
-      gl.attachShader(program, compile(gl.FRAGMENT_SHADER, fragmentSource));
-      gl.linkProgram(program);
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        throw new Error(gl.getProgramInfoLog(program) || 'Shader program failed to link.');
-      }
-
-      gl.useProgram(program);
-      const buffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
-      const positionLocation = gl.getAttribLocation(program, 'position');
-      gl.enableVertexAttribArray(positionLocation);
-      gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-      resolutionLocation = gl.getUniformLocation(program, 'iResolution');
-      timeLocation = gl.getUniformLocation(program, 'iTime');
-      mouseLocation = gl.getUniformLocation(program, 'iMouse');
-      canvas.addEventListener('pointermove', updateMouse);
-      canvas.addEventListener('pointerdown', (event) => { mouse.z = 1; updateMouse(event); });
-      window.addEventListener('pointerup', () => { mouse.z = -1; });
-      canvas.addEventListener('pointerleave', () => { if (mouse.z < 0) mouse.x = mouse.y = 0; });
-      window.addEventListener('resize', resize);
-      resize();
-      requestAnimationFrame(render);
-    } catch (error) {
-      errorBox.textContent = `Unable to start shader:\n${error.message}`;
-      errorBox.hidden = false;
-    }
-
-    function resize() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const width = Math.max(1, Math.floor(canvas.clientWidth * dpr));
-      const height = Math.max(1, Math.floor(canvas.clientHeight * dpr));
-      if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width;
-        canvas.height = height;
-      }
-      gl.viewport(0, 0, width, height);
-      gl.uniform3f(resolutionLocation, width, height, 1);
-      gl.uniform1f(timeLocation, currentTime);
-      gl.uniform4f(mouseLocation, mouse.x, mouse.y, mouse.z, mouse.w);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
-    }
-
-    function updateMouse(event) {
-      const rect = canvas.getBoundingClientRect();
-      mouse.x = (event.clientX - rect.left) * canvas.width / rect.width;
-      mouse.y = (rect.bottom - event.clientY) * canvas.height / rect.height;
-    }
-
-    function render(now) {
-      if (!paused) {
-        currentTime = (now - startTime) / 1000;
-        gl.uniform1f(timeLocation, currentTime);
-        gl.uniform4f(mouseLocation, mouse.x, mouse.y, mouse.z, mouse.w);
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
-      }
-      requestAnimationFrame(render);
-    }
-
-    toggle.addEventListener('click', () => {
-      paused = !paused;
-      if (paused) pausedAt = performance.now();
-      else startTime += performance.now() - pausedAt;
-      toggle.setAttribute('aria-label', paused ? 'Resume animation' : 'Pause animation');
-      toggle.title = paused ? 'Resume animation' : 'Pause animation';
-      icon.innerHTML = paused
-        ? '<path d="M8 5v14l11-7z"/>'
-        : '<path d="M7 5h4v14H7zm6 0h4v14h-4z"/>';
-    });
-  </script>
+  <main>
+    <div class="eyebrow">REAL-TIME WEBGL / SHADER PORTFOLIO</div>
+    <h1>Two shader studies.</h1>
+    <section class="studies" aria-label="Shader studies">
+      <a href="fractal-bloom/"><div class="number">01</div><div class="name">Fractal Bloom</div><div class="description">A colorful animated fractal study.</div></a>
+      <a href="octahedron-tunnel/"><div class="number">02</div><div class="name">Octahedron Tunnel</div><div class="description">A ray-marched tunnel of repeating octahedra.</div></a>
+    </section>
+  </main>
 </body>
 </html>
