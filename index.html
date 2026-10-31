@@ -29,7 +29,7 @@
     .section-top { display: flex; align-items: end; justify-content: space-between; margin: 0 0 16px; }
     .section-top p { margin: 0; color: #d5d0d7; font: 600 11px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .12em; }
     .section-top small { color: #78737e; font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
-    .studies { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .studies { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
     .study { position: relative; min-height: clamp(290px, 37vw, 430px); overflow: hidden; isolation: isolate; padding: 25px; display: flex; flex-direction: column; justify-content: space-between; color: #fff; text-decoration: none; border: 1px solid rgb(255 255 255 / 14%); border-radius: 20px; background: #111; transition: transform .35s cubic-bezier(.2,.8,.2,1), border-color .35s, box-shadow .35s; }
     .study:hover, .study:focus-visible { transform: translateY(-6px); border-color: rgb(255 255 255 / 44%); box-shadow: 0 25px 70px rgb(0 0 0 / 35%); outline: none; }
     .preview { position: absolute; z-index: -1; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .78; transition: transform .55s cubic-bezier(.2,.8,.2,1), opacity .35s; }
@@ -46,6 +46,7 @@
     @keyframes drift-two { to { transform: translate(-17vw, -12vh); } }
     @keyframes spin { to { transform: rotate(1turn); } }
     @keyframes render-pulse { to { transform: translateX(-50%) rotateX(67deg) translateY(-34px) scale(1.08); opacity: .72; } }
+    @media (max-width: 900px) { .studies { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 620px) { .studies { grid-template-columns: 1fr; } .status { display: none; } h1 { letter-spacing: -.065em; } footer { display: block; } footer span { display: block; margin-top: 5px; } }
     @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
   </style>
@@ -54,11 +55,12 @@
   <div class="noise" aria-hidden="true"></div><div class="render-field" aria-hidden="true"></div>
   <main>
     <nav aria-label="Site identity"><span class="mark"><i></i> WUYIAN95 / STUDIES</span><span class="status">WEBGL · LIVE</span></nav>
-    <header class="hero"><p class="eyebrow">A TINY COLLECTION OF REAL-TIME EXPERIMENTS</p><h1>Motion,<span>color &amp; light.</span></h1><p class="intro">Two small worlds written in fragment shaders. Pick a study and let it run.</p></header>
-    <div class="section-top"><p>SELECT A STUDY</p><small>02 / 02</small></div>
+    <header class="hero"><p class="eyebrow">A TINY COLLECTION OF REAL-TIME EXPERIMENTS</p><h1>Motion,<span>color &amp; light.</span></h1><p class="intro">Three small worlds written in fragment shaders. Pick a study and let it run.</p></header>
+    <div class="section-top"><p>SELECT A STUDY</p><small>03 / 03</small></div>
     <section class="studies" aria-label="Shader studies">
       <a class="study bloom" href="fractal-bloom/" aria-label="Open Fractal Bloom"><img class="preview" src="assets/fractal-bloom.png" alt=""><span class="card-number">01 / FRACTAL</span><div class="card-bottom"><div><h2 class="card-title">Fractal Bloom</h2><p class="card-type">COLOR PALETTE · RECURSIVE FORMS</p></div><span class="arrow" aria-hidden="true">↗</span></div></a>
       <a class="study tunnel" href="octahedron-tunnel/" aria-label="Open Octahedron Tunnel"><img class="preview" src="assets/octahedron-tunnel.png" alt=""><span class="card-number">02 / RAY MARCH</span><div class="card-bottom"><div><h2 class="card-title">Octahedron Tunnel</h2><p class="card-type">SDF · INTERACTIVE CAMERA</p></div><span class="arrow" aria-hidden="true">↗</span></div></a>
+      <a class="study sdf" href="sdf-primitives/" aria-label="Open SDF Primitives"><img class="preview" src="assets/sdf-primitives.png" alt=""><span class="card-number">03 / SDF LAB</span><div class="card-bottom"><div><h2 class="card-title">SDF Primitives</h2><p class="card-type">SPHERE · BOX · LIVE GLSL EDITOR</p></div><span class="arrow" aria-hidden="true">↗</span></div></a>
     </section>
     <footer><span>MADE WITH GLSL + WEBGL</span><span>© 2026 WUYIAN95</span></footer>
   </main>

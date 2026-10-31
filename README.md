@@ -6,6 +6,7 @@
 
 - [Fractal Bloom](https://wuyian95.github.io/shader-portfolio/fractal-bloom/)
 - [Octahedron Tunnel](https://wuyian95.github.io/shader-portfolio/octahedron-tunnel/)
+- [SDF Primitives](https://wuyian95.github.io/shader-portfolio/sdf-primitives/)
 
 A single-file WebGL portfolio page. The fragment shader uses a Shadertoy-style mainImage entry point with iResolution, iTime, and iMouse uniforms. Move or drag on the canvas to steer the tunnel. No build step or external libraries are required.
 

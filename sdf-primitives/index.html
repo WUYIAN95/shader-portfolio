@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SDF Primitives / 球体与盒子</title>
+  <style>
+    :root { color-scheme: dark; --bg: #08090d; --panel: rgba(18, 20, 28, .86); --line: rgba(255,255,255,.13); --muted: #9297a6; --ink: #f4f5f8; --accent: #a7b8ff; }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    body { background: radial-gradient(circle at 78% 5%, rgba(109, 124, 255, .17), transparent 34rem), radial-gradient(circle at 10% 88%, rgba(222, 82, 138, .12), transparent 30rem), var(--bg); }
+    a { color: inherit; text-decoration: none; }
+    .top { display: flex; justify-content: space-between; align-items: center; padding: 27px 4vw; color: #c5c8d3; font: 11px ui-monospace, monospace; letter-spacing: .12em; }
+    .top a:last-child { color: var(--muted); letter-spacing: .04em; }
+    main { width: min(1280px, calc(100vw - 8vw)); margin: 0 auto; padding: 4vh 0 60px; }
+    .intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, 350px); gap: 30px; align-items: end; margin-bottom: 30px; }
+    .eyebrow { margin: 0 0 14px; color: var(--accent); font: 11px ui-monospace, monospace; letter-spacing: .16em; }
+    h1 { margin: 0; max-width: 780px; font-size: clamp(42px, 7vw, 92px); line-height: .9; letter-spacing: -.065em; font-weight: 420; }
+    h1 span { color: #8e929e; }
+    .lede { margin: 0; color: #adb0bb; font-size: 14px; line-height: 1.65; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(330px, .75fr); gap: 14px; align-items: start; }
+    .stage { min-height: 570px; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: #040507; }
+    canvas { display: block; width: 100%; height: 570px; cursor: grab; }
+    canvas.dragging { cursor: grabbing; }
+    .stage-label { position: absolute; z-index: 1; left: 21px; top: 19px; color: rgba(255,255,255,.76); font: 11px ui-monospace, monospace; letter-spacing: .1em; pointer-events: none; }
+    .stage-label strong { display: block; margin-top: 8px; color: #fff; font: 22px system-ui, sans-serif; letter-spacing: -.03em; }
+    .stage-hint { position: absolute; left: 21px; bottom: 18px; color: rgba(255,255,255,.54); font: 11px ui-monospace, monospace; pointer-events: none; }
+    .controls { position: absolute; right: 18px; top: 17px; display: flex; gap: 6px; }
+    button, select { color: #e9ebf3; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); border-radius: 8px; padding: 9px 11px; font: 12px ui-monospace, monospace; cursor: pointer; }
+    button:hover, button:focus-visible, select:focus-visible { border-color: rgba(255,255,255,.55); outline: none; }
+    button.active { background: rgba(167,184,255,.24); border-color: rgba(167,184,255,.7); }
+    .side { display: grid; gap: 14px; }
+    .panel { padding: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 13px; }
+    .panel-title { margin: 0; color: #e7e8ee; font: 600 11px ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; }
+    .panel-note { color: var(--muted); font: 11px ui-monospace, monospace; }
+    pre { max-height: 200px; overflow: auto; margin: 0; padding: 13px; color: #cbd4ff; background: #0a0c13; border: 1px solid rgba(255,255,255,.09); border-radius: 8px; font: 12px/1.6 ui-monospace, monospace; white-space: pre-wrap; }
+    textarea { width: 100%; min-height: 310px; resize: vertical; color: #dce1f3; background: #090b12; border: 1px solid rgba(255,255,255,.13); border-radius: 8px; padding: 13px; font: 11px/1.6 ui-monospace, monospace; tab-size: 2; }
+    textarea:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+    .actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; }
+    .primary { background: #dce3ff; color: #171b2b; border-color: #dce3ff; font-weight: 700; }
+    .swatches { display: flex; gap: 7px; align-items: center; }
+    .swatch { width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 2px solid transparent; }
+    .swatch.active { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.2); }
+    .error { display: none; margin-top: 10px; padding: 10px; color: #ffc6cb; background: rgba(105, 27, 38, .52); border: 1px solid rgba(255,130,145,.4); border-radius: 7px; white-space: pre-wrap; font: 11px/1.5 ui-monospace, monospace; }
+    footer { padding-top: 28px; color: #747887; font: 11px ui-monospace, monospace; }
+    @media (max-width: 880px) { .intro, .workspace { grid-template-columns: 1fr; } .stage, canvas { min-height: 430px; height: 430px; } .side { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 600px) { main { width: min(100% - 28px, 560px); padding-top: 2vh; } .top { padding: 20px 14px; } .side { grid-template-columns: 1fr; } h1 { font-size: 48px; } }
+  </style>
+</head>
+<body>
+  <header class="top"><a href="../">WUYIAN95 / STUDIES</a><a href="../">&#8592; portfolio</a></header>
+  <main>
+    <section class="intro">
+      <div><p class="eyebrow">SHADER STUDY / 03 · SIGNED DISTANCE FIELDS</p><h1>球体与盒子<span>，从距离开始。</span></h1></div>
+      <p class="lede">两个最基础的距离场原语。拖动画布旋转视角，滚轮改变距离；你也可以直接编辑 GLSL，让它长成自己的形状。</p>
+    </section>
+    <section class="workspace">
+      <div class="stage">
+        <div class="stage-label">LIVE RAYMARCH<strong id="objectName">Sphere / 球体</strong></div>
+        <div class="controls"><button class="object active" data-object="sphere">球体</button><button class="object" data-object="box">盒子</button></div>
+        <canvas id="canvas" aria-label="Interactive SDF preview"></canvas>
+        <div class="stage-hint">DRAG TO ORBIT · SCROLL TO ZOOM</div>
+      </div>
+      <div class="side">
+        <section class="panel"><div class="panel-head"><h2 class="panel-title">Distance formula / 距离公式</h2><span class="panel-note" id="formulaLabel">sphere</span></div><pre id="formula"></pre></section>
+        <section class="panel"><div class="panel-head"><h2 class="panel-title">Fragment shader / 完整代码</h2><span class="panel-note">in memory only</span></div><textarea id="editor" spellcheck="false"></textarea><div class="actions"><button id="reset">恢复默认</button><button class="primary" id="apply">应用代码</button></div><div id="error" class="error"></div></section>
+        <section class="panel"><div class="panel-head"><h2 class="panel-title">Color / 颜色</h2><span class="panel-note">preview only</span></div><div class="swatches"><button class="swatch active" data-color="0.45,0.72,1.0" style="background:#73b8ff" aria-label="Blue"></button><button class="swatch" data-color="1.0,0.37,0.48" style="background:#ff5f7a" aria-label="Pink"></button><button class="swatch" data-color="0.55,1.0,0.67" style="background:#8dffab" aria-label="Green"></button><button class="swatch" data-color="1.0,0.72,0.35" style="background:#ffb85b" aria-label="Orange"></button></div></section>
+      </div>
+    </section>
+    <footer>All edits live in this page session and reset when the page is closed or refreshed.</footer>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+      var canvas = document.getElementById('canvas');
+      var gl = canvas.getContext('webgl', { antialias: false, alpha: false });
+      var errorBox = document.getElementById('error');
+      var editor = document.getElementById('editor');
+      var formula = document.getElementById('formula');
+      var objectName = document.getElementById('objectName');
+      var formulaLabel = document.getElementById('formulaLabel');
+      var current = 'sphere';
+      var color = [0.45, 0.72, 1.0];
+      var angle = 0.55;
+      var elevation = 0.25;
+      var zoom = 3.1;
+      var dragging = false;
+      var lastX = 0;
+      var lastY = 0;
+      var program;
+      var uniforms = {};
+
+      var code = {
+        sphere: `precision highp float;
+uniform vec3 iResolution;
+uniform float iTime;
+uniform float uRotation;
+uniform float uElevation;
+uniform float uZoom;
+uniform vec3 uColor;
+
+// 球体距离场：返回点 p 到半径为 radius 的球面的有符号距离。
+float sdSphere(vec3 p, float radius) {
+  return length(p) - radius;
+}
+
+float map(vec3 p) {
+  return sdSphere(p, 1.0);
+}
+
+vec3 getNormal(vec3 p) {
+  vec2 e = vec2(0.001, 0.0);
+  return normalize(vec3(
+    map(p + e.xyy) - map(p - e.xyy),
+    map(p + e.yxy) - map(p - e.yxy),
+    map(p + e.yyx) - map(p - e.yyx)
+  ));
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
+  vec3 ro = vec3(sin(uRotation) * uZoom, uElevation, cos(uRotation) * uZoom);
+  vec3 forward = normalize(-ro);
+  vec3 right = normalize(cross(forward, vec3(0.0, 1.0, 0.0)));
+  vec3 up = cross(right, forward);
+  vec3 rd = normalize(forward + uv.x * right + uv.y * up);
+  float t = 0.0;
+  float d = 0.0;
+  int steps = 0;
+  for (int i = 0; i < 96; i++) {
+    vec3 p = ro + rd * t;
+    d = map(p);
+    steps = i;
+    t += d;
+    if (d < 0.001 || t > 20.0) break;
+  }
+  vec3 col = vec3(0.005, 0.007, 0.014);
+  if (d < 0.001) {
+    vec3 p = ro + rd * t;
+    vec3 n = getNormal(p);
+    vec3 light = normalize(vec3(-0.5, 0.8, 1.0));
+    float diffuse = max(dot(n, light), 0.0);
+    float rim = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
+    col = uColor * (0.12 + 0.72 * diffuse + 0.35 * rim);
+  }
+  fragColor = vec4(col, 1.0);
+}`,
+        box: `precision highp float;
+uniform vec3 iResolution;
+uniform float iTime;
+uniform float uRotation;
+uniform float uElevation;
+uniform float uZoom;
+uniform vec3 uColor;
+
+// 盒子距离场：q 是点到盒子半边长的偏移。
+float sdBox(vec3 p, vec3 halfSize) {
+  vec3 q = abs(p) - halfSize;
+  return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+float map(vec3 p) {
+  p.xy *= mat2(cos(0.55), -sin(0.55), sin(0.55), cos(0.55));
+  return sdBox(p, vec3(0.82, 0.82, 0.82));
+}
+
+vec3 getNormal(vec3 p) {
+  vec2 e = vec2(0.001, 0.0);
+  return normalize(vec3(
+    map(p + e.xyy) - map(p - e.xyy),
+    map(p + e.yxy) - map(p - e.yxy),
+    map(p + e.yyx) - map(p - e.yyx)
+  ));
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
+  vec3 ro = vec3(sin(uRotation) * uZoom, uElevation, cos(uRotation) * uZoom);
+  vec3 forward = normalize(-ro);
+  vec3 right = normalize(cross(forward, vec3(0.0, 1.0, 0.0)));
+  vec3 up = cross(right, forward);
+  vec3 rd = normalize(forward + uv.x * right + uv.y * up);
+  float t = 0.0;
+  float d = 0.0;
+  int steps = 0;
+  for (int i = 0; i < 96; i++) {
+    vec3 p = ro + rd * t;
+    d = map(p);
+    steps = i;
+    t += d;
+    if (d < 0.001 || t > 20.0) break;
+  }
+  vec3 col = vec3(0.005, 0.007, 0.014);
+  if (d < 0.001) {
+    vec3 p = ro + rd * t;
+    vec3 n = getNormal(p);
+    vec3 light = normalize(vec3(-0.5, 0.8, 1.0));
+    float diffuse = max(dot(n, light), 0.0);
+    float rim = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
+    col = uColor * (0.12 + 0.72 * diffuse + 0.35 * rim);
+  }
+  fragColor = vec4(col, 1.0);
+}`
+      };
+      var formulaCode = {
+        sphere: 'float sdSphere(vec3 p, float radius) {\n  return length(p) - radius;\n}',
+        box: 'float sdBox(vec3 p, vec3 halfSize) {\n  vec3 q = abs(p) - halfSize;\n  return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);\n}'
+      };
+
+      if (!gl) { errorBox.textContent = 'WebGL is unavailable.'; errorBox.style.display = 'block'; return; }
+      var vertex = 'attribute vec2 position; void main(){ gl_Position = vec4(position, 0.0, 1.0); }';
+      function compile(type, source) { var shader = gl.createShader(type); gl.shaderSource(shader, source); gl.compileShader(shader); if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) { var log = gl.getShaderInfoLog(shader); gl.deleteShader(shader); throw Error(log); } return shader; }
+      function useSource(source) {
+        errorBox.style.display = 'none';
+        try {
+          var next = gl.createProgram();
+          gl.attachShader(next, compile(gl.VERTEX_SHADER, vertex));
+          gl.attachShader(next, compile(gl.FRAGMENT_SHADER, source + '\nvoid main(){ mainImage(gl_FragColor, gl_FragCoord.xy); }'));
+          gl.linkProgram(next);
+          if (!gl.getProgramParameter(next, gl.LINK_STATUS)) throw Error(gl.getProgramInfoLog(next));
+          gl.useProgram(next);
+          program = next;
+          uniforms.resolution = gl.getUniformLocation(program, 'iResolution');
+          uniforms.time = gl.getUniformLocation(program, 'iTime');
+          uniforms.rotation = gl.getUniformLocation(program, 'uRotation');
+          uniforms.elevation = gl.getUniformLocation(program, 'uElevation');
+          uniforms.zoom = gl.getUniformLocation(program, 'uZoom');
+          uniforms.color = gl.getUniformLocation(program, 'uColor');
+        } catch (err) { errorBox.textContent = 'Shader 编译失败：\n' + err.message; errorBox.style.display = 'block'; }
+      }
+      var buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
+      function refreshEditor() { editor.value = code[current]; formula.textContent = formulaCode[current]; formulaLabel.textContent = current; objectName.textContent = current === 'sphere' ? 'Sphere / 球体' : 'Box / 盒子'; useSource(editor.value); }
+      document.querySelectorAll('.object').forEach(function (button) { button.addEventListener('click', function () { current = button.dataset.object; document.querySelectorAll('.object').forEach(function (item) { item.classList.toggle('active', item === button); }); refreshEditor(); }); });
+      document.getElementById('apply').addEventListener('click', function () { code[current] = editor.value; useSource(editor.value); });
+      document.getElementById('reset').addEventListener('click', refreshEditor);
+      document.querySelectorAll('.swatch').forEach(function (button) { button.addEventListener('click', function () { color = button.dataset.color.split(',').map(Number); document.querySelectorAll('.swatch').forEach(function (item) { item.classList.toggle('active', item === button); }); }); });
+      canvas.addEventListener('pointerdown', function (event) { dragging = true; lastX = event.clientX; lastY = event.clientY; canvas.classList.add('dragging'); canvas.setPointerCapture(event.pointerId); });
+      canvas.addEventListener('pointermove', function (event) { if (!dragging) return; angle += (event.clientX - lastX) * 0.008; elevation = Math.max(-1.5, Math.min(1.5, elevation + (event.clientY - lastY) * 0.006)); lastX = event.clientX; lastY = event.clientY; });
+      canvas.addEventListener('pointerup', function () { dragging = false; canvas.classList.remove('dragging'); });
+      canvas.addEventListener('wheel', function (event) { event.preventDefault(); zoom = Math.max(1.65, Math.min(7.0, zoom + event.deltaY * 0.002)); }, { passive: false });
+      function resize() { var scale = Math.min(devicePixelRatio || 1, 2); canvas.width = Math.max(1, Math.floor(canvas.clientWidth * scale)); canvas.height = Math.max(1, Math.floor(canvas.clientHeight * scale)); gl.viewport(0, 0, canvas.width, canvas.height); }
+      window.addEventListener('resize', resize); resize(); refreshEditor();
+      var start = performance.now();
+      function render(now) { if (program) { gl.uniform3f(uniforms.resolution, canvas.width, canvas.height, 1); gl.uniform1f(uniforms.time, (now - start) / 1000); gl.uniform1f(uniforms.rotation, angle); gl.uniform1f(uniforms.elevation, elevation); gl.uniform1f(uniforms.zoom, zoom); gl.uniform3f(uniforms.color, color[0], color[1], color[2]); var position = gl.getAttribLocation(program, 'position'); gl.enableVertexAttribArray(position); gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0); gl.drawArrays(gl.TRIANGLES, 0, 6); } requestAnimationFrame(render); }
+      requestAnimationFrame(render);
+    }());
+  </script>
+</body>
+</html>
