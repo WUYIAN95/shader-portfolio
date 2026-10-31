@@ -23,7 +23,7 @@
     .lede { margin: 0; color: #adb0bb; font-size: 14px; line-height: 1.65; }
     .workspace { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(330px, .75fr); gap: 14px; align-items: start; }
     .stage { min-height: 570px; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: #040507; }
-    canvas { display: block; width: 100%; height: 570px; }
+    canvas { display: block; width: 100%; height: 570px; transform-origin: center center; }
     button, select { color: #e9ebf3; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); border-radius: 8px; padding: 9px 11px; font: 500 12px "JetBrains Mono", ui-monospace, monospace; cursor: pointer; }
     button:hover, button:focus-visible, select:focus-visible { border-color: rgba(255,255,255,.55); outline: none; }
     button.active { background: rgba(167,184,255,.24); border-color: rgba(167,184,255,.7); }
@@ -36,6 +36,20 @@
     textarea { width: 100%; min-height: 370px; resize: vertical; color: #dce1f3; background: #090b12; border: 1px solid rgba(255,255,255,.13); border-radius: 8px; padding: 13px; font: 400 13px/1.55 "JetBrains Mono", ui-monospace, monospace; tab-size: 2; }
     textarea:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
     .actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; }
+    .toolbox { position: relative; margin: -2px 0 12px; }
+    .tool-toggle { display: inline-flex; align-items: center; gap: 8px; min-width: 38px; justify-content: center; padding: 7px 10px; color: #cbd4ff; background: #111522; }
+    .tool-toggle::before { content: ""; width: 7px; height: 7px; border: 1px solid currentColor; transform: rotate(45deg); }
+    .tool-content { display: grid; gap: 9px; margin-top: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #0d1019; }
+    .tool-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .tool-label { min-width: 44px; color: var(--muted); font: 400 11px "JetBrains Mono", ui-monospace, monospace; }
+    .tool-content button, .color-chip { padding: 6px 9px; font-size: 11px; }
+    .axis-controls[hidden], .tool-content[hidden], .color-dock[hidden], #colorPicker[hidden] { display: none; }
+    .color-dock { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin: -3px 0 9px; }
+    .color-dock:empty { display: none; }
+    .color-chip { display: inline-flex; align-items: center; gap: 7px; color: #e9ebf3; }
+    .color-chip i { width: 15px; height: 15px; border: 1px solid rgba(255,255,255,.6); border-radius: 3px; }
+    #colorPicker { position: fixed; z-index: 10; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .tool-state { color: #aeb5ce; font: 400 10px/1.4 "JetBrains Mono", ui-monospace, monospace; }
     .primary { background: #dce3ff; color: #171b2b; border-color: #dce3ff; font-weight: 700; }
     .error { display: none; margin-top: 10px; padding: 10px; color: #ffc6cb; background: rgba(105, 27, 38, .52); border: 1px solid rgba(255,130,145,.4); border-radius: 7px; white-space: pre-wrap; font: 11px/1.5 ui-monospace, monospace; }
     .primitive-switch { display: flex; gap: 6px; }
@@ -57,7 +71,17 @@
       </div>
       <div class="side">
         <section class="panel"><div class="panel-head"><h2 class="panel-title">Distance formula / 距离公式</h2><span class="panel-note" id="formulaLabel">sphere</span></div><pre id="formula"></pre></section>
-        <section class="panel"><div class="panel-head"><h2 class="panel-title">Fragment shader / 完整代码</h2><div class="primitive-switch"><button class="object active" data-object="sphere">球体</button><button class="object" data-object="box">盒子</button></div></div><textarea id="editor" spellcheck="false"></textarea><div class="actions"><button id="reset">恢复默认</button><button class="primary" id="apply">运行代码</button></div><div id="error" class="error"></div></section>
+        <section class="panel"><div class="panel-head"><h2 class="panel-title">Fragment shader / 完整代码</h2><div class="primitive-switch"><button class="object active" data-object="sphere">球体</button><button class="object" data-object="box">盒子</button></div></div>
+          <div class="toolbox" id="toolbox"><button class="tool-toggle" id="toolToggle" aria-expanded="false" aria-controls="toolContent">工具</button>
+            <div class="tool-content" id="toolContent" hidden>
+              <div class="tool-row"><span class="tool-label">动作</span><button id="rotateTool" aria-expanded="false">旋转</button><button id="commentTool" aria-pressed="false">注释</button><button id="scaleTool" aria-pressed="false">缩放</button><button id="paletteTool" aria-pressed="false">调色盘</button></div>
+              <div class="tool-row" id="rotateModes" hidden><span class="tool-label">旋转</span><button data-mode="2D">2D</button><button data-mode="3D">3D</button></div>
+              <div class="tool-row axis-controls" id="axisControls" hidden><span class="tool-label">轴向</span></div>
+              <div class="tool-state" id="toolState" aria-live="polite">待命</div>
+            </div>
+          </div>
+          <div class="color-dock" id="colorDock" aria-label="检测到的颜色向量" hidden></div><input id="colorPicker" type="color" aria-label="选择颜色" hidden>
+          <textarea id="editor" spellcheck="false"></textarea><div class="actions"><button id="reset">恢复默认</button><button class="primary" id="apply">运行代码</button></div><div id="error" class="error"></div></section>
       </div>
     </section>
     <footer>All edits live in this page session and reset when the page is closed or refreshed.</footer>
@@ -72,9 +96,26 @@
       var editor = document.getElementById('editor');
       var formula = document.getElementById('formula');
       var formulaLabel = document.getElementById('formulaLabel');
+      var toolbox = document.getElementById('toolbox');
+      var toolToggle = document.getElementById('toolToggle');
+      var toolContent = document.getElementById('toolContent');
+      var toolState = document.getElementById('toolState');
+      var rotateModes = document.getElementById('rotateModes');
+      var axisControls = document.getElementById('axisControls');
+      var colorDock = document.getElementById('colorDock');
+      var colorPicker = document.getElementById('colorPicker');
       var current = 'sphere';
       var program;
       var uniforms = {};
+      var commentSnapshot = null;
+      var activeColorRange = null;
+      var colorVectors = [];
+      var rotationMode = null;
+      var selectedAxis = 'all';
+      var zoomFactor = 1;
+      var touchDistance = 0;
+      var toolsPinned = false;
+      var paletteEnabled = false;
 
       var code = {
         sphere: `precision highp float;
@@ -288,6 +329,150 @@ void main(){ mainImage(gl_FragColor,gl_FragCoord.xy); }`
         box: 'float sdBox(vec3 p,vec3 b){\n    vec3 q=abs(p)-b;\n    return length(max(q,0.))+min(max(q.x,max(q.y,q.z)),0.);\n}'
       };
       var defaultCode = { sphere: code.sphere, box: code.box };
+      var sessionCode = { sphere: code.sphere, box: code.box };
+
+      function setToolsOpen(open) {
+        toolContent.hidden = !open;
+        toolToggle.setAttribute('aria-expanded', String(open));
+      }
+      toolToggle.addEventListener('click', function () { toolsPinned = !toolsPinned; setToolsOpen(toolsPinned); });
+      toolbox.addEventListener('mouseenter', function () { setToolsOpen(true); });
+      toolbox.addEventListener('mouseleave', function () { if (!toolsPinned && !toolbox.contains(document.activeElement)) setToolsOpen(false); });
+      toolbox.addEventListener('focusout', function (event) { if (!toolsPinned && !toolbox.contains(event.relatedTarget)) setToolsOpen(false); });
+
+      var rotateTool = document.getElementById('rotateTool');
+      rotateTool.addEventListener('click', function () {
+        var open = rotateModes.hidden;
+        rotateModes.hidden = !open;
+        rotateTool.setAttribute('aria-expanded', String(open));
+        if (!open) axisControls.hidden = true;
+      });
+      rotateModes.querySelectorAll('[data-mode]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          rotationMode = button.dataset.mode;
+          selectedAxis = 'all';
+          rotateModes.querySelectorAll('[data-mode]').forEach(function (item) { item.classList.toggle('active', item === button); });
+          axisControls.replaceChildren(axisControls.querySelector('.tool-label'));
+          (rotationMode === '2D' ? ['X', 'Y'] : ['X', 'Y', 'Z']).forEach(function (axis) {
+            var axisButton = document.createElement('button');
+            axisButton.type = 'button'; axisButton.textContent = axis; axisButton.dataset.axis = axis;
+            axisButton.classList.add('active'); axisButton.setAttribute('aria-pressed', 'true');
+            axisButton.addEventListener('click', function () {
+              var resetAll = selectedAxis === axis;
+              selectedAxis = resetAll ? 'all' : axis;
+              axisControls.querySelectorAll('[data-axis]').forEach(function (item) {
+                item.classList.toggle('active', resetAll || item === axisButton);
+                item.setAttribute('aria-pressed', String(resetAll || item === axisButton));
+              });
+              toolState.textContent = rotationMode + ' · ' + (selectedAxis === 'all' ? 'XYZ'.slice(0, rotationMode === '2D' ? 2 : 3) : selectedAxis);
+            });
+            axisControls.appendChild(axisButton);
+          });
+          axisControls.hidden = false;
+          toolState.textContent = rotationMode + ' · ' + (rotationMode === '2D' ? 'XY' : 'XYZ');
+        });
+      });
+
+      function foldComments(fold) {
+        if (fold && commentSnapshot === null) {
+          if (!/^\s*\/\//m.test(editor.value)) return false;
+          commentSnapshot = editor.value;
+          editor.value = editor.value.split('\n').filter(function (line) { return !/^\s*\/\//.test(line); }).join('\n');
+          editor.disabled = true;
+        } else if (!fold && commentSnapshot !== null) {
+          editor.value = commentSnapshot;
+          commentSnapshot = null;
+          editor.disabled = false;
+        }
+        document.getElementById('commentTool').setAttribute('aria-pressed', String(fold));
+        return true;
+      }
+      document.getElementById('commentTool').addEventListener('click', function () {
+        var folding = commentSnapshot === null;
+        var changed = foldComments(folding);
+        toolState.textContent = changed ? (folding ? '注释已收起' : '注释已显示') : '当前代码没有注释';
+      });
+      document.getElementById('scaleTool').addEventListener('click', function (event) {
+        var enabled = event.currentTarget.getAttribute('aria-pressed') !== 'true';
+        event.currentTarget.setAttribute('aria-pressed', String(enabled));
+        event.currentTarget.classList.toggle('active', enabled);
+        toolState.textContent = enabled ? '缩放输入已启用 · ×' + zoomFactor.toFixed(2) : '缩放输入已停用';
+      });
+
+      function colorToHex(values) {
+        return '#' + values.map(function (value) { return Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, '0'); }).join('');
+      }
+      function scanColors() {
+        colorVectors = [];
+        var expression = /vec3\s*\(\s*(-?(?:\d*\.)?\d+(?:e[-+]?\d+)?)[fF]?\s*,\s*(-?(?:\d*\.)?\d+(?:e[-+]?\d+)?)[fF]?\s*,\s*(-?(?:\d*\.)?\d+(?:e[-+]?\d+)?)[fF]?\s*\)/gi;
+        var match;
+        while ((match = expression.exec(editor.value))) {
+          var lineStart = editor.value.lastIndexOf('\n', match.index) + 1;
+          var lineEnd = editor.value.indexOf('\n', match.index);
+          if (lineEnd < 0) lineEnd = editor.value.length;
+          var prefix = editor.value.slice(lineStart, match.index);
+          var line = editor.value.slice(lineStart, lineEnd);
+          if (!/\b(?:color|colour|col|basecolor)\b/i.test(line) || !/=/.test(prefix)) continue;
+          var values = match.slice(1).map(Number);
+          if (values.every(function (value) { return value >= 0 && value <= 1; })) colorVectors.push({ start: match.index, end: expression.lastIndex, value: colorToHex(values) });
+        }
+        colorDock.replaceChildren();
+        colorVectors.forEach(function (entry, index) {
+          var chip = document.createElement('button');
+          chip.type = 'button'; chip.className = 'color-chip'; chip.setAttribute('aria-label', '编辑颜色 ' + (index + 1));
+          var swatch = document.createElement('i'); swatch.style.backgroundColor = entry.value;
+          chip.appendChild(swatch); chip.appendChild(document.createTextNode('颜色 ' + (index + 1)));
+          chip.addEventListener('click', function () {
+            activeColorRange = { start: entry.start, end: entry.end };
+            colorPicker.value = entry.value;
+            var rect = chip.getBoundingClientRect();
+            colorPicker.style.left = Math.round(rect.left) + 'px'; colorPicker.style.top = Math.round(rect.bottom + 4) + 'px';
+            colorPicker.hidden = false; colorPicker.click();
+            toolState.textContent = '选择颜色 ' + (index + 1);
+          });
+          colorDock.appendChild(chip);
+        });
+        colorDock.hidden = !(paletteEnabled || document.activeElement === editor);
+      }
+      document.getElementById('paletteTool').addEventListener('click', function (event) {
+        var enabled = event.currentTarget.getAttribute('aria-pressed') !== 'true';
+        paletteEnabled = enabled;
+        event.currentTarget.setAttribute('aria-pressed', String(enabled));
+        event.currentTarget.classList.toggle('active', enabled);
+        colorDock.hidden = !enabled;
+        toolState.textContent = enabled ? '调色盘已就绪' : '调色盘已收起';
+      });
+      colorPicker.addEventListener('input', function () {
+        if (!activeColorRange) return;
+        var hex = colorPicker.value.slice(1);
+        var values = [0, 2, 4].map(function (offset) { return (parseInt(hex.slice(offset, offset + 2), 16) / 255).toFixed(3); });
+        editor.value = editor.value.slice(0, activeColorRange.start) + 'vec3(' + values.join(', ') + ')' + editor.value.slice(activeColorRange.end);
+        activeColorRange.end = activeColorRange.start + ('vec3(' + values.join(', ') + ')').length;
+        scanColors();
+      });
+      colorPicker.addEventListener('change', function () { activeColorRange = null; colorPicker.hidden = true; });
+      editor.addEventListener('input', scanColors);
+      editor.addEventListener('focus', scanColors);
+      editor.addEventListener('blur', function () { if (!paletteEnabled) colorDock.hidden = true; });
+
+      canvas.addEventListener('wheel', function (event) {
+        if (document.getElementById('scaleTool').getAttribute('aria-pressed') !== 'true') return;
+        event.preventDefault(); zoomFactor = Math.max(0.2, Math.min(5, zoomFactor * (event.deltaY < 0 ? 1.08 : 0.92)));
+        canvas.style.transform = 'scale(' + zoomFactor + ')';
+        toolState.textContent = '缩放输入 · ×' + zoomFactor.toFixed(2);
+      }, { passive: false });
+      canvas.addEventListener('touchstart', function (event) {
+        if (event.touches.length === 2) touchDistance = Math.hypot(event.touches[0].clientX - event.touches[1].clientX, event.touches[0].clientY - event.touches[1].clientY);
+      }, { passive: true });
+      canvas.addEventListener('touchmove', function (event) {
+        if (document.getElementById('scaleTool').getAttribute('aria-pressed') !== 'true' || event.touches.length !== 2 || !touchDistance) return;
+        event.preventDefault();
+        var nextDistance = Math.hypot(event.touches[0].clientX - event.touches[1].clientX, event.touches[0].clientY - event.touches[1].clientY);
+        zoomFactor = Math.max(0.2, Math.min(5, zoomFactor * nextDistance / touchDistance)); touchDistance = nextDistance;
+        canvas.style.transform = 'scale(' + zoomFactor + ')';
+        toolState.textContent = '缩放输入 · ×' + zoomFactor.toFixed(2);
+      }, { passive: false });
+      canvas.addEventListener('touchend', function () { touchDistance = 0; }, { passive: true });
 
       if (!gl) { errorBox.textContent = 'WebGL is unavailable.'; errorBox.style.display = 'block'; return; }
       var vertex = 'attribute vec2 position; void main(){ gl_Position = vec4(position, 0.0, 1.0); }';
@@ -307,10 +492,10 @@ void main(){ mainImage(gl_FragColor,gl_FragCoord.xy); }`
         } catch (err) { errorBox.textContent = 'Shader 编译失败：\n' + err.message; errorBox.style.display = 'block'; }
       }
       var buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
-      function refreshEditor() { editor.value = code[current]; formula.textContent = formulaCode[current]; formulaLabel.textContent = current; useSource(editor.value); }
-      document.querySelectorAll('.object').forEach(function (button) { button.addEventListener('click', function () { current = button.dataset.object; document.querySelectorAll('.object').forEach(function (item) { item.classList.toggle('active', item === button); }); refreshEditor(); }); });
-      document.getElementById('apply').addEventListener('click', function () { useSource(editor.value); });
-      document.getElementById('reset').addEventListener('click', function () { code[current] = defaultCode[current]; refreshEditor(); });
+      function refreshEditor() { foldComments(false); editor.value = sessionCode[current]; formula.textContent = formulaCode[current]; formulaLabel.textContent = current; useSource(editor.value); scanColors(); }
+      document.querySelectorAll('.object').forEach(function (button) { button.addEventListener('click', function () { foldComments(false); current = button.dataset.object; document.querySelectorAll('.object').forEach(function (item) { item.classList.toggle('active', item === button); }); refreshEditor(); }); });
+      document.getElementById('apply').addEventListener('click', function () { sessionCode[current] = editor.value; useSource(editor.value); });
+      document.getElementById('reset').addEventListener('click', function () { foldComments(false); sessionCode[current] = defaultCode[current]; refreshEditor(); });
       function resize() { var scale = Math.min(devicePixelRatio || 1, 2); canvas.width = Math.max(1, Math.floor(canvas.clientWidth * scale)); canvas.height = Math.max(1, Math.floor(canvas.clientHeight * scale)); gl.viewport(0, 0, canvas.width, canvas.height); }
       window.addEventListener('resize', resize); resize(); refreshEditor();
       var start = performance.now();
